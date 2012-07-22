@@ -32,6 +32,10 @@ ifeq ($(TARGET_ARCH),arm)
 L_CFLAGS += -mabi=aapcs-linux
 endif
 
+ifeq ($(BOARD_WEXT_NO_COMBO_SCAN),true)
+L_CFLAGS += -DWEXT_NO_COMBO_SCAN
+endif
+
 # To ignore possible wrong network configurations
 L_CFLAGS += -DWPA_IGNORE_CONFIG_ERRORS
 
@@ -39,7 +43,9 @@ L_CFLAGS += -DWPA_IGNORE_CONFIG_ERRORS
 L_CFLAGS += -DWPA_UNICODE_SSID
 
 # OpenSSL is configured without engines on Android
-L_CFLAGS += -DOPENSSL_NO_ENGINE
+L_CFLAGS += -DOPENSSL_NO_ENGINE -lnl 
+
+LIBS_p += -lnl
 
 INCLUDES = $(LOCAL_PATH)
 INCLUDES += $(LOCAL_PATH)/src
@@ -59,6 +65,8 @@ INCLUDES += $(LOCAL_PATH)/src/utils
 INCLUDES += $(LOCAL_PATH)/src/wps
 INCLUDES += external/openssl/include
 INCLUDES += frameworks/base/cmds/keystore
+INCLUDES += external/libnl/include
+
 
 OBJS = config.c
 OBJS += src/utils/common.c
@@ -149,10 +157,14 @@ L_CFLAGS += -DCONFIG_DRIVER_WEXT
 CONFIG_WIRELESS_EXTENSION=y
 endif
 
+
+LIBS += -lnl 
+
 ifdef CONFIG_DRIVER_NL80211
 L_CFLAGS += -DCONFIG_DRIVER_NL80211
 OBJS_d += src/drivers/driver_nl80211.c
-LIBS += -lnl
+LIBS += -lnl 
+LIBS_W += -lnl
 ifdef CONFIG_CLIENT_MLME
 OBJS_d += src/drivers/radiotap.c
 endif
@@ -1127,7 +1139,7 @@ endif
 ifneq ($(BOARD_WPA_SUPPLICANT_PRIVATE_LIB),)
 LOCAL_STATIC_LIBRARIES += $(BOARD_WPA_SUPPLICANT_PRIVATE_LIB)
 endif
-LOCAL_SHARED_LIBRARIES := libc libcutils libcrypto libssl
+LOCAL_SHARED_LIBRARIES := libc libcutils libcrypto libssl libnl
 LOCAL_CFLAGS := $(L_CFLAGS)
 LOCAL_SRC_FILES := $(OBJS)
 LOCAL_C_INCLUDES := $(INCLUDES)
