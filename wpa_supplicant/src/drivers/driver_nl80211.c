@@ -93,6 +93,44 @@ static void
 wpa_driver_nl80211_finish_drv_init(struct wpa_driver_nl80211_data *drv);
 
 
+#ifdef ANDROID
+#define MAX_DRV_CMD_SIZE 32
+
+
+
+static int wpa_driver_nl80211_driver_cmd(void *priv, char *cmd, char *buf,
+					 size_t buf_len)
+{
+   struct wpa_driver_nl80211_data *drv = priv;
+   int ret = -1;
+   char buffer[128];
+   char *str;
+   FILE *fp;
+   float link, level;
+   static int link_dbg=100;
+   if (os_strcasecmp(cmd, "RSSI-APPROX") == 0) {
+		os_strncpy(cmd, "RSSI", 10);
+   }
+	if ((os_strcasecmp(cmd, "RSSI") == 0)){
+	   fp= fopen("/proc/net/wireless","r");
+	   if( fp == NULL )
+         {
+		   wpa_printf(MSG_ERROR, "Could not open /proc/net/wireless");
+		   return -1;
+	   }
+	   while(fgets(buffer,128, fp)){
+		//wpa_printf(MSG_DEBUG, "read: %s %s", buffer, drv->ifname);
+		if ((str = os_strstr(buffer, drv->ifname))!=NULL){
+		   	sscanf(buffer +  14, "%f %f", &link, &level);
+			wpa_printf(MSG_DEBUG, "found wlan0: %d %f", link, level);
+		}
+	   }
+	   ret = sprintf(buf,"dummy rssi %d", (int)level);
+	}
+	return ret;
+}
+#endif
+
 /* nl80211 code */
 static int ack_handler(struct nl_msg *msg, void *arg)
 {
@@ -2763,4 +2801,7 @@ const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.mlme_add_sta = wpa_driver_nl80211_mlme_add_sta,
 	.mlme_remove_sta = wpa_driver_nl80211_mlme_remove_sta,
 #endif /* CONFIG_CLIENT_MLME */
+#ifdef ANDROID
+	.driver_cmd = wpa_driver_nl80211_driver_cmd,
+#endif
 };
